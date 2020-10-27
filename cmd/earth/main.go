@@ -1460,6 +1460,15 @@ func (app *earthApp) newBuildkitdClient(ctx context.Context, opts ...client.Clie
 	return bkClient, nil
 }
 
+// NullLogger is a silent logger that drops all messages
+type NullLogger struct{}
+
+// Logf drops all messages
+func (nl *NullLogger) Logf(format string, args ...interface{}) {}
+
+// Errorf drops all messages
+func (nl *NullLogger) Errorf(format string, args ...interface{}) {}
+
 func (app *earthApp) collectAnalytics(exitCode int, realtime time.Duration) {
 	if app.cfg.Global.DisableAnalytics {
 		return
@@ -1472,7 +1481,14 @@ func (app *earthApp) collectAnalytics(exitCode int, realtime time.Duration) {
 			installID = "unknown"
 		}
 	}
-	segmentClient := analytics.New("RtwJaMBswcW3CNMZ7Ops79dV6lEZqsXf")
+	cfg := analytics.Config{}
+	if !app.verbose {
+		cfg.Logger = &NullLogger{}
+	}
+	segmentClient, err := analytics.NewWithConfig("RtwJaMBswcW3CNMZ7Ops79dV6lEZqsXf", cfg)
+	if err != nil {
+		return // best effort
+	}
 	segmentClient.Enqueue(analytics.Track{
 		Event:  "cli-" + app.commandName,
 		UserId: installID,
