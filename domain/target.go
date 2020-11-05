@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"path"
+	"regexp"
 	"strings"
 )
 
@@ -66,7 +67,7 @@ func (et Target) String() string {
 
 // StringCanonical returns a string representation of the Target, in canonical form.
 func (et Target) StringCanonical() string {
-	if et.ProjectPath != "" {
+	if et.GitURL != "" {
 		tag := fmt.Sprintf(":%s", et.Tag)
 		if et.Tag == "" {
 			tag = ""
@@ -78,7 +79,7 @@ func (et Target) StringCanonical() string {
 
 // ProjectCanonical returns a string representation of the project of the target, in canonical form.
 func (et Target) ProjectCanonical() string {
-	if et.ProjectPath != "" {
+	if et.GitURL != "" {
 		tag := fmt.Sprintf(":%s", et.Tag)
 		if et.Tag == "" {
 			tag = ""
@@ -89,6 +90,52 @@ func (et Target) ProjectCanonical() string {
 		return ""
 	}
 	return path.Base(et.LocalPath)
+}
+
+type gitMatcher struct {
+	pattern string
+	user    string
+	suffix  string
+}
+
+// returns git path in the form user@host:path/to/repo.git, and any subdir
+func parseGitURLandPath(path string) (string, string, error) {
+	matchers := []gitMatcher{
+		{
+			pattern: "github.com/[^/]+/[^/]+",
+			user:    "git",
+			suffix:  ".git",
+		},
+		{
+			pattern: "gitlab.com/[^/]+/[^/]+",
+			user:    "git",
+			suffix:  ".git",
+		},
+		{
+			pattern: "bitbucket.com/[^/]+/[^/]+",
+			user:    "git",
+			suffix:  ".git",
+		},
+		{
+			pattern: "192.168.0.116/my/test/path/[^/]+",
+			user:    "alex",
+			suffix:  ".git",
+		},
+	}
+	fmt.Println(path)
+	for _, m := range matchers {
+		r, err := regexp.Compile(m.pattern)
+		if err != nil {
+			panic(err)
+		}
+		match := r.FindString(path)
+		if match != "" {
+			subPath := path[len(match):]
+			return match, subPath, nil
+		}
+		fmt.Println()
+	}
+	return "", "", nil
 }
 
 // ParseTarget parses a string into a Target.
@@ -127,29 +174,16 @@ func ParseTarget(fullTargetName string) (Target, error) {
 			tag = partsColon[1]
 		}
 
-		if !strings.HasSuffix(partsColon[0], "github.com") {
-			panic("TODO")
+		gitURL, gitPath, err := parseGitURLandPath(partsColon[0])
+		if err != nil {
+			return Target{}, err
 		}
 
-		//registry := ""
-		//projectPath := ""
-		//if partsColon[0] != "" {
-		//	partsSlash := strings.Split(partsColon[0], "/")
-		//	if len(partsSlash) == 1 {
-		//		projectPath = partsSlash[0]
-		//	} else {
-		//		registry = partsSlash[0]
-		//		projectPath = strings.Join(partsSlash[1:], "/")
-		//	}
-		//}
-
-		partsPlus[0]
-
 		return Target{
-			Registry:    registry,
-			ProjectPath: projectPath,
-			Tag:         tag,
-			Target:      partsPlus[1],
+			GitURL:  gitURL,
+			GitPath: gitPath,
+			Tag:     tag,
+			Target:  partsPlus[1],
 		}, nil
 	}
 }
@@ -160,16 +194,17 @@ func JoinTargets(target1 Target, target2 Target) (Target, error) {
 	if target1.IsRemote() {
 		// target1 is remote. Turn relative targets into remote targets.
 		if !ret.IsRemote() {
-			ret.Registry = target1.Registry
-			ret.ProjectPath = target1.ProjectPath
+			panic("TODO")
+			//ret.Registry = target1.Registry
+			//ret.ProjectPath = target1.ProjectPath
 			ret.Tag = target1.Tag
 			if ret.IsLocalExternal() {
 				if path.IsAbs(ret.LocalPath) {
 					return Target{}, fmt.Errorf(
 						"Absolute path %s not supported as reference in external target context", ret.LocalPath)
 				}
-				ret.ProjectPath = path.Join(
-					target1.ProjectPath, ret.LocalPath)
+				//ret.ProjectPath = path.Join(
+				//	target1.ProjectPath, ret.LocalPath)
 				ret.LocalPath = ""
 			} else if ret.IsLocalInternal() {
 				ret.LocalPath = ""

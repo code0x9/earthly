@@ -2,6 +2,7 @@ package buildcontext
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/earthly/earthly/cleanup"
 	"github.com/earthly/earthly/domain"
@@ -49,6 +50,7 @@ func NewResolver(sessionID string, cleanCollection *cleanup.Collection) *Resolve
 
 // Resolve returns resolved build context data.
 func (r *Resolver) Resolve(ctx context.Context, gwClient gwclient.Client, target domain.Target) (*Data, error) {
+	fmt.Printf("Resolve(%v)\n", target)
 	localDirs := make(map[string]string)
 	if target.IsRemote() {
 		// Remote.

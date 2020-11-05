@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/earthly/earthly/cleanup"
@@ -32,7 +33,7 @@ type resolvedGitProject struct {
 	// gitMetaAndEarthfileRef is the ref containing the git metadata and build files.
 	gitMetaAndEarthfileRef gwclient.Reference
 	// gitProject is the git project identifier. For GitHub, this is <username>/<project>.
-	gitProject string
+	//gitProject string
 	// hash is the git hash.
 	hash string
 	// branches is the git branches.
@@ -44,6 +45,7 @@ type resolvedGitProject struct {
 }
 
 func (gr *gitResolver) resolveEarthProject(ctx context.Context, gwClient gwclient.Client, target domain.Target) (*Data, error) {
+	fmt.Printf("resolveEarthProject(%v)\n", target)
 	if !target.IsRemote() {
 		return nil, fmt.Errorf("Unexpected local target %s", target.String())
 	}
@@ -92,27 +94,80 @@ func (gr *gitResolver) resolveEarthProject(ctx context.Context, gwClient gwclien
 		BuildFilePath: localBuildFilePath,
 		BuildContext:  buildContext,
 		GitMetadata: &GitMetadata{
-			BaseDir:    "",
-			RelDir:     subDir,
-			RemoteURL:  gitURL,
-			GitVendor:  target.Registry,
-			GitProject: rgp.gitProject,
-			Hash:       rgp.hash,
-			Branch:     rgp.branches,
-			Tags:       rgp.tags,
+			BaseDir:   "",
+			RelDir:    subDir,
+			RemoteURL: gitURL,
+			//GitVendor:  target.Registry,
+			//GitProject: rgp.gitProject,
+			Hash:   rgp.hash,
+			Branch: rgp.branches,
+			Tags:   rgp.tags,
 		},
 	}, nil
 }
 
-func (gr *gitResolver) resolveGitProject(ctx context.Context, gwClient gwclient.Client, target domain.Target) (rgp *resolvedGitProject, gitURL string, subDir string, finalErr error) {
-	projectPathParts := strings.Split(target.ProjectPath, "/")
-	if len(projectPathParts) < 2 {
-		return nil, "", "", fmt.Errorf("Invalid github project path %s", target.ProjectPath)
+type gitMatcher struct {
+	pattern string
+	user    string
+	suffix  string
+}
+
+// returns git path in the form user@host:path/to/repo.git, and any subdir
+func (gr *gitResolver) getGitClonePath(ctx context.Context, path string) (string, string, error) {
+	matchers := []gitMatcher{
+		{
+			pattern: "github.com/[^/]+/[^/]+",
+			user:    "git",
+			suffix:  ".git",
+		},
+		{
+			pattern: "gitlab.com/[^/]+/[^/]+",
+			user:    "git",
+			suffix:  ".git",
+		},
+		{
+			pattern: "bitbucket.com/[^/]+/[^/]+",
+			user:    "git",
+			suffix:  ".git",
+		},
+		{
+			pattern: "192.168.0.116/my/test/path/[^/]+",
+			user:    "alex",
+			suffix:  ".git",
+		},
 	}
-	githubUsername := projectPathParts[0]
-	githubProject := projectPathParts[1]
-	subDir = strings.Join(projectPathParts[2:], "/")
-	gitURL = fmt.Sprintf("git@%s:%s/%s.git", target.Registry, githubUsername, githubProject)
+	fmt.Println(path)
+	for _, m := range matchers {
+		r, err := regexp.Compile(m.pattern)
+		if err != nil {
+			panic(err)
+		}
+		match := r.FindString(path)
+		if match != "" {
+			parts := strings.SplitN(match, "/", 2)
+			gitURL := fmt.Sprintf("%s@%s:%s%s", m.user, parts[0], parts[1], m.suffix)
+			subPath := path[len(match):]
+			fmt.Printf("returning %q %q\n", gitURL, subPath)
+			return gitURL, subPath, nil
+		}
+		fmt.Println()
+	}
+	return "", "", nil
+}
+
+func (gr *gitResolver) resolveGitProject(ctx context.Context, gwClient gwclient.Client, target domain.Target) (rgp *resolvedGitProject, gitURL string, subDir string, finalErr error) {
+	//gitURL, subDir, _ = gr.getGitClonePath(ctx, target.Registry+"/"+target.ProjectPath)
+	//if gitURL == "" {
+	//	return nil, "", "", fmt.Errorf("Invalid github project path %s", target.ProjectPath)
+	//}
+	//projectPathParts := strings.Split(target.ProjectPath, "/")
+	//if len(projectPathParts) < 2 {
+	//	return nil, "", "", fmt.Errorf("Invalid github project path %s", target.ProjectPath)
+	//}
+	//githubUsername := projectPathParts[0]
+	//githubProject := projectPathParts[1]
+	//subDir = strings.Join(projectPathParts[2:], "/")
+	//gitURL = fmt.Sprintf("git@%s:%s/%s.git", target.Registry, githubUsername, githubProject)
 	ref := target.Tag
 
 	// Check the cache first.
@@ -208,7 +263,7 @@ func (gr *gitResolver) resolveGitProject(ctx context.Context, gwClient gwclient.
 		hash:                   gitHash,
 		branches:               gitBranches2,
 		tags:                   gitTags2,
-		gitProject:             fmt.Sprintf("%s/%s", githubUsername, githubProject),
+		//gitProject:             "thishere" + gitURL, //fmt.Sprintf("%s/%s", githubUsername, githubProject),
 		state: llbgit.Git(
 			gitURL,
 			gitHash,

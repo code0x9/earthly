@@ -200,6 +200,7 @@ func (c *Converter) FromDockerfile(ctx context.Context, contextPath string, dfPa
 		if err != nil {
 			return errors.Wrap(err, "join targets")
 		}
+		fmt.Printf("calling Resolve1\n")
 		data, err := c.resolver.Resolve(ctx, c.gwClient, dockerfileMetaTarget)
 		if err != nil {
 			return errors.Wrap(err, "resolve build context for dockerfile")
@@ -393,6 +394,7 @@ func (c *Converter) SaveImage(ctx context.Context, imageNames []string, pushImag
 
 // Build applies the earth BUILD command.
 func (c *Converter) Build(ctx context.Context, fullTargetName string, buildArgs []string) (*states.MultiTarget, error) {
+	fmt.Printf("calling build on %q\n", fullTargetName)
 	relTarget, err := domain.ParseTarget(fullTargetName)
 	if err != nil {
 		return nil, errors.Wrapf(err, "earth target parse %s", fullTargetName)
@@ -416,6 +418,7 @@ func (c *Converter) Build(ctx context.Context, fullTargetName string, buildArgs 
 		return nil, errors.Wrap(err, "parse build args")
 	}
 	// Recursion.
+	fmt.Printf("calling Earthfile2LLB rescursively on %q\n", target)
 	mts, err := Earthfile2LLB(
 		ctx, target, ConvertOpt{
 			GwClient:             c.gwClient,
