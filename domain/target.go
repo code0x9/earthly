@@ -101,10 +101,12 @@ type gitMatcher struct {
 	suffix  string
 }
 
+// GitLookup looksup gits
 type GitLookup struct {
 	matchers []gitMatcher
 }
 
+// NewGitLookup creates new lookuper
 func NewGitLookup() *GitLookup {
 	matchers := []gitMatcher{
 		{
@@ -135,9 +137,10 @@ func NewGitLookup() *GitLookup {
 	return gl
 }
 
+// TODO needs fixing
 var TODO = NewGitLookup()
 
-// returns git path in the form user@host:path/to/repo.git, and any subdir
+// ParseGitURLandPath returns git path in the form user@host:path/to/repo.git, and any subdir
 func (gl *GitLookup) ParseGitURLandPath(path string) (string, string, error) {
 	fmt.Printf("ParseGitURLandPath(%q)\n", path)
 	for _, m := range gl.matchers {
@@ -167,6 +170,7 @@ func (gl *GitLookup) ParseGitURLandPath(path string) (string, string, error) {
 	return "", "", nil
 }
 
+// GetCloneURL returns a string
 func (gl *GitLookup) GetCloneURL(path string) (string, error) {
 	for _, m := range gl.matchers {
 		r, err := regexp.Compile(m.pattern)
@@ -261,10 +265,10 @@ func JoinTargets(target1 Target, target2 Target) (Target, error) {
 					return Target{}, fmt.Errorf(
 						"Absolute path %s not supported as reference in external target context", ret.LocalPath)
 				}
-				panic(fmt.Sprintf("join %q and %q", target1.GitPath, ret.GitPath))
 				//ret.ProjectPath = path.Join(
 				//	target1.ProjectPath, ret.LocalPath)
 				ret.LocalPath = ""
+				panic(fmt.Sprintf("join %q and %q", target1.GitPath, ret.GitPath))
 			} else if ret.IsLocalInternal() {
 				ret.LocalPath = ""
 			}
