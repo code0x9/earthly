@@ -145,7 +145,8 @@ func MaybeRestart(ctx context.Context, console conslogging.ConsoleLogger, image 
 	} else {
 		console.
 			WithPrefix("buildkitd").
-			Printf("Newer image available. Restarting buildkit daemon...\n")
+			Printf("Newer image available. Restarting buildkit daemon... HACK NO I'm NOT!\n")
+		return nil
 	}
 
 	// Replace.

@@ -48,6 +48,7 @@ type ConvertOpt struct {
 
 // Earthfile2LLB parses a earthfile and executes the statements for a given target.
 func Earthfile2LLB(ctx context.Context, target domain.Target, opt ConvertOpt) (mts *states.MultiTarget, err error) {
+	fmt.Printf("Earthfile2LLB(%q)\n", target)
 	if opt.SolveCache == nil {
 		opt.SolveCache = make(map[string]llb.State)
 	}
@@ -97,6 +98,7 @@ func Earthfile2LLB(ctx context.Context, target domain.Target, opt ConvertOpt) (m
 	if err != nil {
 		return nil, errors.Wrapf(err, "resolve build context for target %s", target.String())
 	}
+	fmt.Println("calling newEarthfileTree")
 	// Convert.
 	errorListener := antlrhandler.NewReturnErrorListener()
 	errorStrategy := antlrhandler.NewReturnErrorStrategy()
@@ -104,10 +106,12 @@ func Earthfile2LLB(ctx context.Context, target domain.Target, opt ConvertOpt) (m
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("calling new converter")
 	converter, err := NewConverter(ctx, bc.Target, bc, opt)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("calling walk tree")
 	walkErr := walkTree(newListener(ctx, converter, target.Target), tree)
 	if len(errorListener.Errs) > 0 {
 		var errString []string

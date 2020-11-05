@@ -55,7 +55,7 @@ func detectBuildFileInRef(ctx context.Context, target domain.Target, ref gwclien
 	if exists {
 		return buildEarthPath, nil
 	}
-	return "", errors.Errorf("no build file found in %s", subDir)
+	return "", errors.Errorf("no build file found in %q", subDir)
 }
 
 func fileExists(ctx context.Context, ref gwclient.Reference, fpath string) (bool, error) {
@@ -65,7 +65,7 @@ func fileExists(ctx context.Context, ref gwclient.Reference, fpath string) (bool
 		IncludePattern: file,
 	})
 	if err != nil {
-		return false, errors.Wrapf(err, "cannot read dir %s", dir)
+		return false, errors.Wrapf(err, "cannot read dir %q", dir)
 	}
 	for _, fstat := range fstats {
 		name := path.Base(fstat.GetPath())

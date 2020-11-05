@@ -53,6 +53,7 @@ func (gr *gitResolver) resolveEarthProject(ctx context.Context, gwClient gwclien
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("resolved %q to %q %q\n", target, gitURL, subDir)
 
 	// Restrict the resulting build context to the right subdir.
 	var buildContext llb.State
@@ -171,6 +172,9 @@ func (gr *gitResolver) resolveGitProject(ctx context.Context, gwClient gwclient.
 	//gitURL = fmt.Sprintf("git@%s:%s/%s.git", target.Registry, githubUsername, githubProject)
 	ref := target.Tag
 
+	gitURL = target.GitURL
+	subDir = target.GitPath
+
 	// Check the cache first.
 	cacheKey := fmt.Sprintf("%s#%s", gitURL, ref)
 	data, found := gr.projectCache[cacheKey]
@@ -181,7 +185,7 @@ func (gr *gitResolver) resolveGitProject(ctx context.Context, gwClient gwclient.
 
 	// Copy all Earthfile, build.earth and Dockerfile files.
 	gitOpts := []llb.GitOption{
-		llb.WithCustomNamef("[internal] GIT CLONE %s", gitURL),
+		llb.WithCustomNamef("[internal] GIT CLONE %q", gitURL),
 		llb.KeepGitDir(),
 	}
 	gitState := llbgit.Git(gitURL, ref, gitOpts...)

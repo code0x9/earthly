@@ -54,12 +54,15 @@ func (et Target) String() string {
 		return fmt.Sprintf("%s+%s", et.LocalPath, et.Target)
 	}
 	if et.IsRemote() {
-		tag := fmt.Sprintf(":%s", et.Tag)
-		if et.Tag == "" {
-			tag = ""
+		s := et.GitURL
+		if et.GitPath != "" {
+			s += "/" + et.GitPath
 		}
-		//fmt.Printf("reg: %s projectPath:%s tag:%s target:%s\n", et.Registry, et.ProjectPath, tag, et.Target)
-		return fmt.Sprintf("%s/%s%s+%s", et.GitURL, et.GitPath, tag, et.Target)
+		if et.Tag != "" {
+			s += ":" + et.Tag
+		}
+		s += "+" + et.Target
+		return s
 	}
 	// Local internal.
 	return fmt.Sprintf("+%s", et.Target)
@@ -98,8 +101,11 @@ type gitMatcher struct {
 	suffix  string
 }
 
-// returns git path in the form user@host:path/to/repo.git, and any subdir
-func parseGitURLandPath(path string) (string, string, error) {
+type GitLookup struct {
+	matchers []gitMatcher
+}
+
+func NewGitLookup() *GitLookup {
 	matchers := []gitMatcher{
 		{
 			pattern: "github.com/[^/]+/[^/]+",
@@ -122,20 +128,73 @@ func parseGitURLandPath(path string) (string, string, error) {
 			suffix:  ".git",
 		},
 	}
-	fmt.Println(path)
-	for _, m := range matchers {
+
+	gl := &GitLookup{
+		matchers: matchers,
+	}
+	return gl
+}
+
+var TODO = NewGitLookup()
+
+// returns git path in the form user@host:path/to/repo.git, and any subdir
+func (gl *GitLookup) ParseGitURLandPath(path string) (string, string, error) {
+	fmt.Printf("ParseGitURLandPath(%q)\n", path)
+	for _, m := range gl.matchers {
 		r, err := regexp.Compile(m.pattern)
 		if err != nil {
 			panic(err)
 		}
 		match := r.FindString(path)
 		if match != "" {
-			subPath := path[len(match):]
+			n := len(match) + 1
+			subPath := ""
+			if len(path) > n {
+				subPath = path[n:]
+			}
+			if strings.HasSuffix(match, "/") {
+				panic("bad")
+			}
+			if strings.HasPrefix(subPath, "/") {
+				fmt.Println(subPath)
+				panic("bad1")
+			}
+			fmt.Printf("parsed %q into %q and %q\n", path, match, subPath)
 			return match, subPath, nil
 		}
-		fmt.Println()
 	}
+	fmt.Printf("failed to parse %q\n", path)
 	return "", "", nil
+}
+
+func (gl *GitLookup) GetCloneURL(path string) (string, error) {
+	for _, m := range gl.matchers {
+		r, err := regexp.Compile(m.pattern)
+		if err != nil {
+			panic(err)
+		}
+		match := r.FindString(path)
+		if match == "" {
+			continue
+		}
+		subPath := path[len(match):]
+		if strings.HasSuffix(match, "/") {
+			panic("bad2")
+		}
+		if subPath != "" {
+			panic("bad3")
+		}
+
+		parts := strings.SplitN(match, "/", 2)
+		if len(parts) != 2 {
+			panic("bad4")
+		}
+
+		s := fmt.Sprintf("%s@%s:%s", m.user, parts[0], parts[1])
+		return s, nil
+	}
+	fmt.Printf("failed to parse %q\n", path)
+	return "", nil
 }
 
 // ParseTarget parses a string into a Target.
@@ -174,7 +233,7 @@ func ParseTarget(fullTargetName string) (Target, error) {
 			tag = partsColon[1]
 		}
 
-		gitURL, gitPath, err := parseGitURLandPath(partsColon[0])
+		gitURL, gitPath, err := TODO.ParseGitURLandPath(partsColon[0])
 		if err != nil {
 			return Target{}, err
 		}
@@ -194,15 +253,15 @@ func JoinTargets(target1 Target, target2 Target) (Target, error) {
 	if target1.IsRemote() {
 		// target1 is remote. Turn relative targets into remote targets.
 		if !ret.IsRemote() {
-			panic("TODO")
-			//ret.Registry = target1.Registry
-			//ret.ProjectPath = target1.ProjectPath
+			ret.GitURL = target1.GitURL
+			ret.GitPath = target1.GitPath
 			ret.Tag = target1.Tag
 			if ret.IsLocalExternal() {
 				if path.IsAbs(ret.LocalPath) {
 					return Target{}, fmt.Errorf(
 						"Absolute path %s not supported as reference in external target context", ret.LocalPath)
 				}
+				panic(fmt.Sprintf("join %q and %q", target1.GitPath, ret.GitPath))
 				//ret.ProjectPath = path.Join(
 				//	target1.ProjectPath, ret.LocalPath)
 				ret.LocalPath = ""
