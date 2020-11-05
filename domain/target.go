@@ -9,9 +9,16 @@ import (
 // Target is a earth target identifier.
 type Target struct {
 	// Remote and canonical representation.
-	Registry    string `json:"registry"`
-	ProjectPath string `json:"projectPath"`
-	Tag         string `json:"tag"`
+
+	// old way
+	//Registry    string `json:"registry"`    // github.com
+	//ProjectPath string `json:"projectPath"` // earthly/earthly/examples/go
+	//Tag         string `json:"tag"`         // main
+
+	// new way
+	GitURL  string // "github.com/earthly/earthly"
+	GitPath string // "examples/go"
+	Tag     string // "main"
 
 	// Local representation.
 	LocalPath string `json:"localPath"`
@@ -50,7 +57,8 @@ func (et Target) String() string {
 		if et.Tag == "" {
 			tag = ""
 		}
-		return fmt.Sprintf("%s/%s%s+%s", et.Registry, et.ProjectPath, tag, et.Target)
+		//fmt.Printf("reg: %s projectPath:%s tag:%s target:%s\n", et.Registry, et.ProjectPath, tag, et.Target)
+		return fmt.Sprintf("%s/%s%s+%s", et.GitURL, et.GitPath, tag, et.Target)
 	}
 	// Local internal.
 	return fmt.Sprintf("+%s", et.Target)
@@ -63,7 +71,7 @@ func (et Target) StringCanonical() string {
 		if et.Tag == "" {
 			tag = ""
 		}
-		return fmt.Sprintf("%s/%s%s+%s", et.Registry, et.ProjectPath, tag, et.Target)
+		return fmt.Sprintf("%s/%s%s+%s", et.GitURL, et.GitPath, tag, et.Target)
 	}
 	return et.String()
 }
@@ -75,7 +83,7 @@ func (et Target) ProjectCanonical() string {
 		if et.Tag == "" {
 			tag = ""
 		}
-		return fmt.Sprintf("%s/%s%s", et.Registry, et.ProjectPath, tag)
+		return fmt.Sprintf("%s/%s%s", et.GitURL, et.GitPath, tag)
 	}
 	if et.LocalPath == "." {
 		return ""
@@ -118,17 +126,25 @@ func ParseTarget(fullTargetName string) (Target, error) {
 		if len(partsColon) == 2 {
 			tag = partsColon[1]
 		}
-		registry := ""
-		projectPath := ""
-		if partsColon[0] != "" {
-			partsSlash := strings.Split(partsColon[0], "/")
-			if len(partsSlash) == 1 {
-				projectPath = partsSlash[0]
-			} else {
-				registry = partsSlash[0]
-				projectPath = strings.Join(partsSlash[1:], "/")
-			}
+
+		if !strings.HasSuffix(partsColon[0], "github.com") {
+			panic("TODO")
 		}
+
+		//registry := ""
+		//projectPath := ""
+		//if partsColon[0] != "" {
+		//	partsSlash := strings.Split(partsColon[0], "/")
+		//	if len(partsSlash) == 1 {
+		//		projectPath = partsSlash[0]
+		//	} else {
+		//		registry = partsSlash[0]
+		//		projectPath = strings.Join(partsSlash[1:], "/")
+		//	}
+		//}
+
+		partsPlus[0]
+
 		return Target{
 			Registry:    registry,
 			ProjectPath: projectPath,

@@ -397,10 +397,12 @@ func (c *Converter) Build(ctx context.Context, fullTargetName string, buildArgs 
 	if err != nil {
 		return nil, errors.Wrapf(err, "earth target parse %s", fullTargetName)
 	}
+	fmt.Printf("parsed %q to %v\n", fullTargetName, relTarget)
 	target, err := domain.JoinTargets(c.mts.Final.Target, relTarget)
 	if err != nil {
 		return nil, errors.Wrap(err, "join targets")
 	}
+	fmt.Printf("joined %v and %v to %v\n", c.mts.Final.Target, relTarget, target)
 	newVarCollection := c.varCollection
 	// Don't allow transitive overriding variables to cross project boundaries.
 	propagateBuildArgs := !relTarget.IsExternal()
