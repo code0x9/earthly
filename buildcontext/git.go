@@ -114,6 +114,7 @@ type gitMatcher struct {
 
 // returns git path in the form user@host:path/to/repo.git, and any subdir
 func (gr *gitResolver) getGitClonePath(ctx context.Context, path string) (string, string, error) {
+	fmt.Printf("getGitClonePath(%q)\n", path)
 	matchers := []gitMatcher{
 		{
 			pattern: "github.com/[^/]+/[^/]+",
