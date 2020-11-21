@@ -328,6 +328,12 @@ func (sm *solverMonitor) PrintTiming() {
 	sort.Slice(durs, func(i, j int) bool {
 		return durs[i].dur > durs[j].dur
 	})
+	for _, x := range durs {
+		sm.console.
+			WithPrefixAndSalt(x.key.targetStr, x.key.salt).
+			WithMetadataMode(true).
+			Printf("(%s) %s\n", x.key.targetBrackets, x.dur)
+	}
 	sm.console.
 		WithMetadataMode(true).
 		Printf("===============================================================\n")
