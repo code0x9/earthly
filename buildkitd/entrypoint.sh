@@ -60,6 +60,7 @@ if [ -n "$GIT_URL_INSTEAD_OF" ]; then
         insteadOf="${instead_of#*=}"
         git config --global url."$base".insteadOf "$insteadOf"
     done
+
 fi
 
 # Set up buildkit cache.
