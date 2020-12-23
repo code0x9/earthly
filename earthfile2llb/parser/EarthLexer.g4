@@ -85,6 +85,8 @@ fragment QuotedAtomPart: ('"' (~'"' | '\\"')* '"');
 fragment RegularAtomPart: ~([ \t\r\n\\"]) | EscapedAtomPart;
 fragment EscapedAtomPart: ('\\' .) | (LC [ \t]*);
 
+HereDoc: '<<'([a-zA-Z0-9]+);
+
 NL_C: NL -> type(NL), popMode;
 WS_C: WS -> type(WS);
 

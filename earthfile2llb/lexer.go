@@ -1,6 +1,9 @@
 package earthfile2llb
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"github.com/earthly/earthly/earthfile2llb/parser"
 )
@@ -24,8 +27,10 @@ func newLexer(input antlr.CharStream) antlr.Lexer {
 
 func (l *lexer) NextToken() antlr.Token {
 	peek := l.EarthLexer.NextToken()
+	fmt.Printf("calling NextToken() got type=%v data=%v\n", peek.GetTokenType(), peek)
 	ret := peek
-	switch peek.GetTokenType() {
+	tokenType := peek.GetTokenType()
+	switch tokenType {
 	case parser.EarthLexerWS:
 		if l.afterNewLine {
 			l.indentLevel++
@@ -35,7 +40,43 @@ func (l *lexer) NextToken() antlr.Token {
 	case parser.EarthLexerNL:
 		l.indentLevel = 0
 		l.afterNewLine = true
+	case parser.EarthLexerHereDoc:
+		panic("TODO")
 	default:
+		if tokenType == parser.EarthLexerAtom {
+			s := peek.GetText()
+			fmt.Printf("here with %q\n", s)
+			if strings.HasPrefix(s, "<<") {
+				heredoc := "EOF" // TODO parse this
+
+				start := peek.GetStart()
+				start += len("<<" + heredoc + "\n")
+				n := 1000              // TODO get end of file
+				end := start + (n - 1) // end is inclusive, change to exclusive
+
+				is := l.GetInputStream()
+				fmt.Printf("index is %d\n", is.Index())
+
+				s := is.GetText(start, end)
+				fmt.Printf("got %q\n", s)
+
+				n = strings.Index(s, "EOF")
+				if n < 0 {
+					panic("EOF not found")
+				}
+				s = s[:n]
+				n += len("EOF")
+				fmt.Printf("fast forward %d chars\n", n)
+
+				l.TokenStartCharIndex = start + n
+				// TODO also need to set the line and column here (otherwise parsing error message will point to wrong location)
+
+				fmt.Printf("set token to %q\n", s)
+				ret.SetText(s)
+				return ret
+			}
+		}
+
 		if l.afterNewLine {
 			if l.prevIndentLevel < l.indentLevel {
 				l.tokenQueue = append(l.tokenQueue, l.GetTokenFactory().Create(
