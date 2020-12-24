@@ -20,6 +20,7 @@ type lexer struct {
 }
 
 func newLexer(input antlr.CharStream) antlr.Lexer {
+	fmt.Printf("-- calling newLexer\n")
 	l := new(lexer)
 	l.EarthLexer = parser.NewEarthLexer(input)
 	return l
@@ -27,7 +28,10 @@ func newLexer(input antlr.CharStream) antlr.Lexer {
 
 func (l *lexer) NextToken() antlr.Token {
 	peek := l.EarthLexer.NextToken()
-	fmt.Printf("calling NextToken() got type=%v data=%v\n", peek.GetTokenType(), peek)
+	i := l.EarthLexer.GetInputStream().Index()
+	is := l.EarthLexer.GetInputStream()
+	fmt.Printf("calling NextToken() got type=%v data=%v index=%d ptr=%p\n", peek.GetTokenType(), peek, i, is)
+
 	ret := peek
 	tokenType := peek.GetTokenType()
 	switch tokenType {
@@ -51,7 +55,7 @@ func (l *lexer) NextToken() antlr.Token {
 
 				start := peek.GetStart()
 				start += len("<<" + heredoc + "\n")
-				n := 1000              // TODO get end of file
+				n := 19                // TODO figure this number out programatically
 				end := start + (n - 1) // end is inclusive, change to exclusive
 
 				is := l.GetInputStream()
@@ -73,6 +77,10 @@ func (l *lexer) NextToken() antlr.Token {
 
 				fmt.Printf("set token to %q\n", s)
 				ret.SetText(s)
+				l.GetInputStream().Seek(start + n)
+
+				l.PopMode() // Pop COMMAND
+
 				return ret
 			}
 		}
